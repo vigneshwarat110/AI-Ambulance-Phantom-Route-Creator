@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Ambulance Phantom Route – Emergency Control Room</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      margin:0;
+      font-family:Segoe UI, Arial;
+      background:radial-gradient(circle at top,#0f172a,#020617);
+      color:#e5e7eb;
+    }
+    h2 { margin:10px 15px; color:#facc15; }
+    #layout { display:flex; height:calc(100vh - 50px); }
+    #map { width:65%; height:100%; border-right:2px solid #1f2937; }
+    .panel { width:35%; padding:15px; overflow-y:auto; }
+
+    .card {
+      background:linear-gradient(145deg,#020617,#111827);
+      border:1px solid #1f2937;
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:14px;
+      box-shadow:0 0 10px rgba(0,0,0,.6);
+    }
+    .card h3 { margin:0 0 6px; color:#93c5fd; font-size:15px; }
+
+    .ok{color:#4ade80;} .warn{color:#facc15;}
+    .crit{color:#f87171;} .info{color:#60a5fa;}
+
+    button {
+      width:100%; padding:10px; margin-top:8px;
+      background:linear-gradient(135deg,#2563eb,#1e40af);
+      border:none; border-radius:8px; color:white;
+      cursor:pointer;
+    }
+
+    small {opacity:.7;}
+  </style>
+</head>
+
+<body>
+<h2>🚨 Emergency Infrastructure Health Control Room</h2>
+
+<div id="layout">
+  <div id="map"></div>
+
+  <div class="panel">
+
+    <div class="card">
+      <h3>🚑 Ambulance Crew & Vehicle</h3>
+      Driver: R. Kumar (EMT, 8 yrs)<br>
+      Nurse: S. Priya (Emergency Nurse, 6 yrs)<br>
+      Vehicle: TN-01-AB-12**<br>
+      Speed: <span class="ok">22 km/h</span>
+    </div>
+
+    <div class="card">
+      <h3>🧑‍⚕️ Patient Emergency Status</h3>
+      Level: <span class="crit">CRITICAL</span><br>
+      Category: Cardiac Emergency<br>
+      Golden Time Remaining: 12 min
+    </div>
+
+    <div class="card">
+      <h3>🚶 Pedestrian Safety Check</h3>
+      Signal Phase: <span id="pedState" class="ok">DON’T WALK</span><br>
+      Status: <span id="pedStatus" class="ok">CLEAR</span><br>
+      <small>Source: Existing signal controller</small>
+    </div>
+
+    <div class="card">
+      <h3>🏥 Select Hospital</h3>
+      <button onclick="selectHospital(hospitals[0])">Tambaram GH</button>
+      <button onclick="selectHospital(hospitals[1])">Hindu Mission Hospital</button>
+      <button onclick="selectHospital(hospitals[2])">Private Care Hospital</button>
+    </div>
+
+    <div class="card">
+      <h3>🚦 System Decision</h3>
+      <div id="status">Awaiting hospital selection…</div>
+    </div>
+
+    <small style="text-align:center;display:block;">
+      Anonymized operational data • Safety-first automation
+    </small>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([12.9716,80.1430],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  const ambulance = [12.9716,80.1430];
+  L.marker(ambulance).addTo(map).bindPopup("🚑 Ambulance");
+
+  let pedestrianClear = true;
+  setInterval(()=>{
+    pedestrianClear = !pedestrianClear;
+    document.getElementById("pedState").innerHTML =
+      pedestrianClear ? "DON’T WALK" : "WALK";
+    document.getElementById("pedStatus").innerHTML =
+      pedestrianClear ? "CLEAR" : "ACTIVE";
+    document.getElementById("pedState").className =
+      pedestrianClear ? "ok" : "warn";
+    document.getElementById("pedStatus").className =
+      pedestrianClear ? "ok" : "warn";
+  },10000);
+
+  const hospitals = [
+    {name:"Tambaram GH", coords:[12.9735,80.1490], traffic:"gridlock"},
+    {name:"Hindu Mission Hospital", coords:[12.9665,80.1505], traffic:"congested"},
+    {name:"Private Care Hospital", coords:[12.9605,80.1402], traffic:"smooth"}
+  ];
+
+  hospitals.forEach(h=>L.marker(h.coords).addTo(map).bindPopup("🏥 "+h.name));
+
+  let routeLine;
+
+  function selectHospital(h){
+    if(routeLine) map.removeLayer(routeLine);
+
+    let color =
+      h.traffic==="gridlock"?"red":
+      h.traffic==="congested"?"yellow":"green";
+
+    routeLine = L.polyline([ambulance,h.coords],{color,weight:6}).addTo(map);
+    map.fitBounds(routeLine.getBounds());
+
+    let msg = `<b>🏥 Destination:</b> ${h.name}<br>
+               📡 Hospital Notified: ✅<br>`;
+
+    if(h.traffic==="gridlock"){
+      if(pedestrianClear){
+        msg += `<br><span class="info"><b>🚦 Phantom Signal ACTIVATED</b></span><br>
+                Reason: Gridlock + Pedestrian Clear<br>
+                Action: 2 lanes synchronized<br>
+                <span class="ok">⏱ Time Saved: 6 min</span>`;
+      } else {
+        msg += `<br><span class="warn"><b>🚶 Pedestrians Crossing</b></span><br>
+                Phantom Signal delayed until safe`;
+      }
+    } else {
+      msg += `<br><span class="ok">Traffic manageable – Monitoring</span>`;
+    }
+
+    document.getElementById("status").innerHTML = msg;
+  }
+</script>
+</body>
+</html>
